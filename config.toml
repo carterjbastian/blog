@@ -4,7 +4,7 @@ theme = "ghostwriter"
 languageCode = "en-us"
 copyright = "My Name"
 googleAnalytics = "XXX"
-disqusShortname = "XXX"
+disqusShortname = "carterjbastian"
 buildDrafts = true
 
 [Author]
