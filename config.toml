@@ -1,8 +1,8 @@
 baseURL = "https://carterjbastian.github.io/"
-title = "My New Hugo Site"
+title = "Home"
 theme = "ghostwriter"
 languageCode = "en-us"
-copyright = "My Name"
+copyright = "Carter J. Bastian"
 googleAnalytics = "XXX"
 disqusShortname = "carterjbastian"
 buildDrafts = true
@@ -15,8 +15,8 @@ buildDrafts = true
 
 [Params]
     intro = true
-    headline = "My headline"
-    description = "My description"
+    headline = "README"
+    description = "Posts by Carter J. Bastian"
     github = "https://github.com/carterjbastian"
     linkedin = "https://www.linkedin.com/in/carterbastian/"
     stackoverflow = "https://stackoverflow.com/users/4390113/carter"
@@ -37,11 +37,6 @@ buildDrafts = true
     name = "Posts"
     url = "/"
     weight = 1
-
-[[menu.main]]
-    name = "Projects"
-    url = "/projects/"
-    weight = 2
 
 [[menu.main]]
     name = "About"
