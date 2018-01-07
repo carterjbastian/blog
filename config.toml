@@ -3,7 +3,7 @@ title = "Home"
 theme = "ghostwriter"
 languageCode = "en-us"
 copyright = "Carter J. Bastian"
-googleAnalytics = "XXX"
+googleAnalytics = "UA-112088474-1"
 disqusShortname = "carterjbastian"
 buildDrafts = true
 
