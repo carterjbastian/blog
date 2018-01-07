@@ -1,8 +1,8 @@
 +++
 title = "Recycling Vim Macros"
 description = "A semi-automated approach to lint errors"
-date = 2018-01-04
-publishDate = 2018-01-04
+date = 2018-01-07
+publishDate = 2018-01-07
 author = "Carter J. Bastian"
 aliases = [
     "/post/recycling-vim-macros/",
@@ -25,13 +25,13 @@ This article is going to use the example of resolving slicker-generated lint err
 I'm going to make a couple of assumptions in this post: 
 
 * I assume that you have some knowledge of vim, vim commands, and vim macros. If that's not the case, I would highly recommend [Mastering Vim Quickly](https://jovicailic.org/mastering-vim-quickly/).
-* I assume that you have seen your `.vimrc` file before and know how to edit it. If you haven't, I would highly recommend [Learn Vimscript the Hard Way](http://learnvimscriptthehardway.stevelosh.com/)
+* I assume that you've seen your `.vimrc` file before and know how to edit it. If you haven't, I would highly recommend [Learn Vimscript the Hard Way](http://learnvimscriptthehardway.stevelosh.com/)
 * I assume that your vim setup already plays nicely[<sup>[4]](#FN4)</sup> with python (i.e. that you have filetype-dependent indenting on and that your filetype-dependent indentation indents python correctly).
 
 <br />
 # An Example Problem
 
-Let's consider a hypothetical. Consider a repository with two files:
+Let's consider a hypothetical repository with two files:
 ```bash
 > tree
 .
@@ -76,7 +76,7 @@ my_long_variable = new_directory.commonly_used_module.ImportantClassName(param_1
 Syntactically and semantically, this is correct. However, there a few stylistic problems:
 
 1. Line 4 is longer than 79 characters. According to [PEP8](https://www.python.org/dev/peps/pep-0008/), this is too long.
-2. The paramters on lines 5-6 are not aligned with the parameter on line 4. Yuck!
+2. The parameters on lines 5-6 are not aligned with the parameter on line 4. Yuck!
 
 Sure enough, running our linter, we get the following output:
 ```
@@ -88,7 +88,7 @@ foo.py:5:60: E128 continuation line under-indented for visual indent
 <br />
 # A Recycled Macro Solution
 
-Fixing the lint errors above by hand is a reasonable thing to do... once. However, if we were moving code in a real-life codebase, this class of error would be likely to appear multiple times and in multiple files. Solving this recurring lint error without some form of automation quickly becomes tedious, and sometimes becomes infeasible[<sup>[5]](#FN5)</sup>. 
+Fixing the lint errors above by hand is a reasonable thing to do... once. However, if we were moving code in a real-life codebase, this class of error would be likely to appear many times across multiple files. Solving this recurring lint error without some form of automation quickly becomes tedious, and sometimes becomes infeasible[<sup>[5]](#FN5)</sup>. 
 
 That's where our recycled vim macros come in. After hitting this same class of lint errors a few times, I recognized that I was applying a few patterns of operations over and over and over again. I started saving these patterns as macros whenever I would head into a session of solving lint errors. I eventually got fed up with re-writing and saving my macros every time I opened a new vim session, so I put the following lines in my `.vimrc` file<sup>[[6]](#FN6)</sup>:
 
@@ -202,7 +202,7 @@ my_long_variable = new_directory.commonly_used_module.ImportantClassName(
 # Etc...  # Cursor on this line
 ```
 
-So, starting on the first problematic line, we used the keystroked `@q@w@e@w@e` to solve all of our lint errors, and we didn't even have to navigate or worry about our cursor position!
+So, starting on the first problematic line, we used the keystrokes `@q@w@e@w@e` to solve all of our lint errors, and we didn't even have to navigate or worry about our cursor position!
 
 <br />
 # Bringing it all together
