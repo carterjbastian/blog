@@ -231,7 +231,7 @@ I'm sure that, with enough [yak shaving](http://www.catb.org/~esr/jargon/html/Y/
 This is an understatement. A more accurate statement would be "vim macros are so neat that, paired with a bit of vim-fu, I completely avoided learning even basic command line utilities for an entire CS degree, and I should not be trusted with any tool as neat as vim macros."
 
 <span id="FN2">[2]</span>
-At Khan Academy, we have a [python linter](https://github.com/Khan/khan-linter) that is run at commit-time, before sending off a code review, and on deploy. This linter inforces Khan Academy's [python style guide](https://github.com/Khan/style-guides/blob/master/style/python.md).
+At Khan Academy, we have a [python linter](https://github.com/Khan/khan-linter) that is run at commit-time, before sending off a code review, and on deploy. This linter enforces Khan Academy's [python style guide](https://github.com/Khan/style-guides/blob/master/style/python.md).
 
 <span id="FN3">[3]</span>
 To be fair, I'm not smart enough to reliably break long lines in a pythonic and aesthetic manner either.
