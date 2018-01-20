@@ -13,9 +13,9 @@ aliases = [
 
 \[ This article is cross-posted from Khan Academy's engineering blog. You can see the original [here](http://engineering.khanacademy.org) \]
 
-For the last two months of 2017, the Khan Academy engineering team has been working on our Technical Sustainability Milestone---an all-hands-on-deck initiative aimed at reducing tech debt and optimizing for effective development in 2018 and beyond. One problem that we decided to tackle during this milestone was dependency management. 
+For the last two months of 2017, the Khan Academy engineering team has been working on our Technical Sustainability Milestone---an all-hands-on-deck initiative aimed at reducing tech debt and optimizing for effective development in 2018 and beyond. One problem that we decided to tackle during this milestone was python dependency management. 
 
-Before the project described here, webapp was a giant, unstructured tangle of dependencies. The lack of dependency structure led to practical and architectural issues which made it difficult not only to build new features, but even to maintain existing ones. 
+Before the project described here, the backend of our webapp was a giant, unstructured tangle of dependencies. The lack of an intentionally-architected dependency structure made it difficult both to build new features and to maintain our current product. 
 
 In this post, I'm going to take at our attempt solving for dependency management, as well as the challenges that we ran into over the course of the project.
 
