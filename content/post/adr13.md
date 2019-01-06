@@ -1,8 +1,8 @@
 +++
 title = "Re-architecting for Dependency Structure"
 description = "Untangling Khan Academy's Webapp for Fun and Profit"
-date = 2018-01-15
-publishDate = 2018-01-15
+date = 2018-04-15
+publishDate = 2018-04-15
 author = "Carter J. Bastian"
 aliases = [
     "/post/adr-13/",
@@ -11,173 +11,147 @@ aliases = [
 ]
 +++
 
-\[ This article is cross-posted from Khan Academy's engineering blog. You can see the original [here](http://engineering.khanacademy.org) \]
+\[ This article is cross-posted from Khan Academy's engineering blog. You can see the original [here](http://engineering.khanacademy.org/posts/python-refactor-3.htm) \]
 
-For the last two months of 2017, the Khan Academy engineering team has been working on our Technical Sustainability Milestone---an all-hands-on-deck initiative aimed at reducing tech debt and optimizing for effective development in 2018 and beyond. One problem that we decided to tackle during this milestone was python dependency management. 
+The previous posts about The Great Khan Academy Python Refactor of 2017 and Also 2018 answered two questions: [why](/posts/python-refactor-1.htm) and [how](/posts/slicker.htm) did we refactor all of our Python code? In this post, I want to look closer at a major goal of this project: cleaning up dependencies between parts of our Python codebase.
+ 
+Going into the project, we decided that we would build a dependency order into the structure of our Python code. Below, we’ll look at why dependency order matters, what our solution looked like, and how we went about implementing it.
 
-Before the project described here, the backend of our webapp was a giant, unstructured tangle of dependencies. The lack of an intentionally-architected dependency structure made it difficult both to build new features and to maintain our current product. 
+## Why is dependency order important?
 
-In this post, I'm going to take at our attempt solving for dependency management, as well as the challenges that we ran into over the course of the project.
+Take a look at a visual representation of Khan Academy’s code base:
 
-## Background
+![A picture of a huge dependency graph; little structure is visible amidst the tangle](/adr13/before_deps.png)
 
-Before discussing our solution, it's worthwhile to get a clear picture of the problem. Python doesn't enforced many rules on the structure of your codebase. As a result, it's syntactically correct for almost anything module to import another python module. However, freedom quickly becomes dangerous. 
+Each dot in this image represents a module in our Python codebase. Each line represents an import of one module by another. tl;dr our Python code was a tangle!
 
-There are a lot of potential issues that can arise from bad dependency structure. The most immediate and noticeable problem is circular dependency, where two or more different pieces of code mutually depend on each other. For example, we could have the following scenario, where `module_a` depends on `module_b`, and `module_b` depends on `module_a`:
-```
-# The -> relation indicated dependency
-module_a -> module_b -> module_a
-```
+Our dependency tangle looped back on itself in complicated and frustrating ways that posed a series of problems:
 
-In this situation, both modules are broken until the circular dependency is fixed (either by reorganizing the code such that the modules don't depend on each other, or by moving one of the dependencies out of the top level). This problem becomes even more difficult when the dependency chain becomes larger. For example, we could have a cyclical dependency looking something like this:
+* Code didn’t live where it "should", making it hard both for new developers to get oriented in the codebase and for experienced developers to find the particular functionality they’re looking for.
+* Given an arbitrary change, we didn’t know what to test because we weren’t sure what code might indirectly use the code we changed.
+* Intertwined dependencies made it difficult to draw boundaries between logically distinct parts of the codebase. This in turn made it harder to put stronger service-boundaries on our codebase.
 
-```
-# An arbitrarily long dependency chain
-module_a -> module_b -> module_c -> ... -> module_n -> module_a
-```
+In short, we had a lot of problems stemming from poor code organization.
 
-In order to fix this problem, which doesn't always manifest itself in an immediate or obvious way [1], an engineer has to find the dependency chain, diagnose the structural issue underlying the dependency chain, and then decide where and how to break the cycle. This is an expensive, frustrating, and ineffective process [2]. 
+In addition to these retroactive changes, our less-tangled codebase gives guidance to developers writing new code. Once we put in the work of defining what should and should not be depended on, we know to question any feature design that imports code from higher in the hierarchy. Since this dependency order is built directly into our code structure, we can automatically detect places in the codebase that are either poorly designed or poorly organized.
 
-With that in mind, we can take a look at Khan Academy's webapp:
+## What does dependency order even mean?
 
-![Webapp Dependency Tangle](/adr13/webapp_deps.png)
-*Each dot in this image represents a module in webapp. Each line represents a dependency between two modules. tl;dr webapp was a tangle (and not even [the cool kind](https://iota.org/IOTA_Whitepaper.pdf))! P.C. Ben Kraft*
+In general, a dependency order is a set of rules deciding which files can be imported by a piece of code in a codebase. Some languages and frameworks implement dependency order by placing restrictions on possibly-problematic dependency practices. Since Python doesn't provide any such rules, we decided to write some of our own.
 
-As you can see, there wasn't really a coherent logical structure. Our dependency tangle looped back on itself in complicated and frustrating ways. Further, the recurring circular dependency problems we were seeing were indicators of a larger structural issue; webapp had a decided lack of separation between logically distinct parts of the code. This issue with our architecture is also indirectly expensive.
+We decided to create these rules by placing each Python file in our codebase into some conceptual bucket, which we call a "package", and then defining an ordering on these buckets. The ordering rule is that a file in bucket X can import a file in bucket Y if and only if Y is lower than X in the ordering.
 
-For example, these structural problems
+In other words, we divided all of our code into packages and placed these packages in a (mostly) linear order, where any given package is allowed to depend on packages lower than itself.
 
-- make it really difficult to hold a cohesive mental image of the codebase [3]
-- stand as a barrier to adopting a micro-services architecture
-- encourage hacky solutions to avoid circular dependencies [4]
-- prevent intentional design of new features
-- leave you in the dark as to what downstream side effects even a small code change will entail
+## How we decided on the dependency ordering
 
-### Our Solution
+It was not easy to decide how to order the packages. In theory any directed acyclic graph would be a legal ordering. But we decided to limit ourselves to a linear ordering, with one exception: we sometimes had several packages at the same "level". These packages could not depend on one another, but any package above them could depend on any (or all!) of them.
 
-Our solution to the dependency problem was to divide our codebase into about 40 top-level directories (called "packages"), each of which is owned by one of the Khan Academy engineering initiatives. These packages are placed in a hierarchy, where any given package is allowed to depend on packages lower than itself. Any dependency from a lower-level package to a higher-level package can then be classified as a "bad dependency".
+We did this both to limit the universe of possible orderings, and to make it easier for humans to understand the final result. A linear ordering is easy to understand and explain to others.
 
-By defining what can be depended on by any given code feature, we can automatically detect places in our codebase that are architectually problematic. In short, forcing modularization of our code and enforcing a ban on potentially dangerous dependencies can help us figure out where our codebase is poorly organized and when we need to rethink feature design.
+However, this did open up an issue that we sometimes had to order two totally unrelated packages, and arbitrarily decide which one was higher and which was lower. Sometimes we would decide by calculating the number of bad dependencies both ways, and seeing which led to fewer bad dependencies!
 
-In practice, implementing this solution divided into about three steps:
+## How we untangled our codebase
 
-1. **Defining the packages** --- This meant building a really, _really_ big spreadsheet of every file and every api route in webapp, and then assigning each one to a package. 
+In order to define and enforce our new dependency ordering, we decided to have our 40 packages be top level directories. Any time a file in a lower-level package depends on a file in a higher-level package, we can classify that as a "bad dependency".
 
-2. **Moving each file into its package** --- This is where we spent the bulk of the past two months. Using [slicker](https://github.com/Khan/slicker)--Khan Academy's open source tool for python refactoring--we moved each file from wherever it was living into its proper new home (one of the new directories in the top level of our webapp repo).
+By defining what can (and more importantly, what can't) be depended on by any given code feature, we can automatically detect places in our codebase that are architecturally problematic.
 
-3. **Breaking up pre-existing bad dependencies** -- Finally, once we had our package-based architecture in place, we were able to dive into the codebase, find places with a lot of bad dependencies, and try to reorganize and redesign features that were causing problems.
+Once we had a set of packages and their ordering figured out, the **first step** towards implementation was to move each file in our codebase into the appropriate package, as described in the earlier blog posts. This allowed us to reason about our codebase's dependency structure.
 
-## Hard Things(TM)
+For example, consider the following excerpt from our package list and their descriptions:
 
-Having provided a high-level layout of the problem and our intended solution, we can focus in on the specifics.
+> `lib/` - Miscellaneous libraries. Utilities with some Khan-specific logic that are still general enough to be used across many components.
 
-Phil Karlton once famously claimed that there are only two hard things in computer science: cache invalidation and naming things. Incidentally, we ran into both of these challenges! Unfortunately, they were not the only challenges we ran into [5]. We can, however, roughly categorize the difficulties we encountered into 4 groups of Hard Things. Here we'll introduce some of the challenges we ran into, and the ways we attempted to solve for them.
+> `flags/` - Infrastructure implementing A/B testing and feature flagging.
 
-### I. Organizing Code
+> `coaches/` - Contains core models and mechanics for coach/student (including parent/child and teacher/pupil). Also includes code related to classrooms and schools.
 
-At the beginning of the project, we knew that we wanted everything divided into packages, but we didn't know what those packages would be [6]. The first week or so of the project boiled down to David F., Craig, and distilling every single file and api route in webapp into a monolithic, 2000-line google sheet. As a group, we then looked at each item individually, tried to get to the essense of what it does, and decided where--in which package, that is--it should live.
+These three packages above are listed in dependency order. In other words, it’s fine for the code in `flags/` to depend on the more-general code in `lib/`. Similarly, the higher-level code in `coaches/` implements the coach-student relationship, and should be able to use the lower-level infrastructure in `flags/` to set up coach/student-related experiments.
 
-When we think of categorization, often we think of it in terms of boxes---so analogically, this first week was filled with looking at 2000 different items, and placing them in some number of boxes. However, this particular categorization task was made challenging in that our boxes weren't well-defined. In fact, the definitions of our packages (as well as our definitions and descriptions) changed constantly over the course of developing the file-to-package mapping. Add to this the fact that some of the items we were boxing were old, deprecated, poorly named, and sometimes monolithic and 
+Conversely, if a file in the `flags/` directory were to import a file from the `coaches/` directory, that would violate our dependency order and we would classify that as a "bad dependency". Conceptually, this feels right; for example, it doesn’t seem like good design for the infrastructure implementing experiments to depend on specific, product-level experiments.
 
-Logistically, this meant keeping a lot of things in mind at the same time; rapidly changing definitions and descriptions of an in-flux set of packages, known hubs of depencies, which files relate to which part of the product, which initiative of the eng team is supposed to own each package, etc.
+The **second step** in our process was to find the places where our code wasn’t following the new dependency rules. We used a script for this which output an HTML report on our dependencies.
 
-Personally, I found this to be the most challenging aspect of the project. In the way of solutions, there's really no good shortcut. Still though, we did end up with a few successful strategies for this kind of sweeping re-organization of our codebase:
+Specifically, this was big list of all the dependencies in our codebase broken down by package. For example, here’s an excerpt from one of our package reports listing the bad dependencies (in red) and good dependencies (in green) for one file in the `flags/` packages:
 
-- **Crowdsource decisions**---Having our small team sit down and go through all 2000 files in a big 5-hour meeting (surprisingly, to me at least) proved more effective than paralellizing and trying to divide and conquer. I think this was because the groupthink strategy capitalizes on peoples' unique understandings of different parts of the codebase, and required explicit justification on _why_ something belongs where it does. Both of these helped streamline the evolution 
-- **Iterate quickly**---By the time we finished an iteration of "boxing" everything, the boxes had changed, sometimes beyond recognition. It took 2-3 iterations of going through and mapping everything for our set of packages to start to converge. This process is still ongoing, and should continue to improve as our mental image of our the components of our codebase is still resolving.
-- **Accept fuzzy processes**---At some point, we had to recognize that not all of the decisions were perfectly clear cut. No matter how rigorous you are with the reorganization process, sometimes the most important observation is that something just doesn't feel right.
+> **Flags:**
 
+> * **flags/experiments.py:** depends on <span style="color:red">coaches/parents.py, coaches/students.py, coaches/teachers.py, sat/util.py, translations/videos.py,</span> <span style="color:green">flags/bigbingo/bigbingo.py, flags/bingo\_identity.py, flags/feature\_flags/core.py, flags/gandalf/bridge.py, intl/request.py, web/request/ip\_util.py, web/request/url\_util.py</span>
 
-### II. Moving Code
+> ...
 
-The second big part of the project was actually moving our code from wherever it existed before to its new home---a top-level directory representing a packages. To do this, we used a really, really cool tool called slicker. Slicker is a command-line utility for refactoring python code. Slicker is interesting enough that it has its own blogpost, but for the purposes of this article, slicker works by taking the name of a python symbol in your codebase and the location to where you would like to move it. For example, the following would move a python file `old_dir/foo.py` into the `new_dir` directory:
+> **Diagnostic Report**
 
-```
-slicker.py old_dir/foo.py new_dir/
-```
+> Of 6787 total dependencies, there are 862 bad dependencies (12.700751%).
 
-Despite the awesomeness of slicker, there were some nuances that were tough. For example, at the beginning of the project, slicker had a really hard time with common english words. As a result, moving a file such as `user.py` into a package like `accounts` would change any instances of the word "user" in comments and strings to change to the word "accounts.user" (in files that imported the module `user`). This has the potential to become really confusing:
+As you can see, the example given above was an actual issue in our codebase; the experiment infrastructure was depending on the product logic underlying specific experiments in the `coaches/` package.
+ 
+The **third and final step** was to fix hubs of bad dependencies. This process changed on a case-by-case basis — the cause underlying bad dependencies could be anything from poorly designed code to poorly defined packages.
+ 
+More often than not, a file with lots of bad dependencies was indicative of bad code organization — either the file was in the wrong place, or the file was doing too many things. In these cases, we were able to use that code smell to refactor files relatively easily and improve our code organization.
+ 
+For example, consider the following excerpt from `flags/experiments.py`, which has both a function used for logging opt-in experiments, and also a function used to determine if a user is in a classroom so that we can consider showing them coach-related experiments:
 
-```
-# This parent doesn't have a registered child user 
-```
+```python
+from __future__ import absolute_import
 
-would become something confusing (especially if your a developer with no context on the moves)
+import coaches.students  # BAD DEPENDENCY
+import coaches.teachers  # BAD DEPENDENCY
 
-```
-# This parrent doesn't have a registered child account.user
-```
+def log_opt_in_experiment_event(user_id, experiment_name,
+                                event):
+    # ... add analytics for an event
 
-More problematically, changing strings can break important functionality:
+def is_classroom_user(user_data):
+    """Determine if user is shown classroom A/B tests"""
+    if coaches.teachers.classified_as_teacher(user_data):
+        return CLASSROOM_USER
 
-```
-@route("/api/internal/user/profile", methods=["GET"])
-```
+    if (user_data.classroom_user_status != 
+            UNKNOWN_CLASSROOM_STATUS):
+        return user_data.classroom_user_status
 
-would be changed to an invalid api route that would keep the site from getting user profiles:
+    coaches.students.defer_classroom_status_update(
+        user_data, caller='is_classroom_user')
 
-```
-@route("/api/internal/accounts.user/profile", methods=["GET"])
+    return user_data.NOT_CLASSROOM_USER
 ```
 
-The big lesson that we learned from this challenge is that investing in automation is almost always worth it. 
+In this experiment, the bad dependencies are coming from the second function, and they indicate a valid organizational problem: `is_classroom_user` boils down to an implementation detail for coaching-specific experiments. Since, implementation of specific experiments is outside the scope of experiment infrastructure, `flags/experiments.py` is trying to do something outside the scope of its package.
 
+Thankfully, this is a pretty easy fix: we can just use slicker to move the offending function to wherever the coach-related experiments actually live (in this case, `coaches/experiments.py`).
 
-### III. Playing Well with Others
+After moving this function, flags/experiments.py won’t depend on `coaches.teachers` or `coaches.students`, and our updated package report will look like this:
 
-One of our concerns going into this project was how to do a sweeping reorganization of our codebase without keeping other projects from getting done or making our inconveniencing our teammates and making our friends angry with us.
+> **Flags:**
 
-For example, consider code reviews. At khan Academy, we use phabricator's Differential to review code, and it's best practice to send small, manageable chunks of code out for review so that we can iterate quickly (**TODO link**). Unfortunately, differential is not always the best at handling large changes across many files[7], and the changes required to refactor webapp were, categorically, cumbersome diffs that moved thousands of lines of code and touched hundreds of files. We called this process of moving all of the code for one component into its new home a "package move", and code reviews for package moves were brutal.
+> * **flags/experiments.py:** depends on <span style="color:red">coaches/parents.py, sat/util.py, translations/videos.py,</span> <span style="color:green">flags/bigbingo/bigbingo.py, flags/bingo\_identity.py, flags/feature\_flags/core.py, flags/gandalf/bridge.py, intl/request.py, web/request/ip\_util.py, web/request/url\_util.py</span>
 
-If you request a review on this kind of change from developer who has context on the product but is _not_ working on the refactoring project without providing any context, they're probably (and understandably) going to stare at the screen for a little bit before getting frustrated and confused and resigning from the review.
+> ...
 
-To make this process easier for everyone, we ended up including as much context and help as possible in our commit messages. Since these get included at the top of each differential review, we would explicitly list some context on the project, the exact steps we took to make the package move (down to the slicker command), the challenges we ran into, and what specific changes we think should recieve the most attention. We even started including jokes at the end of our commit messages as a way to say "I'm sorry you woke up on Monday morning to 70k lines of code to review and thank you for helping"[8].
+> **Diagnostic Report**
 
-**TODO screenshots** tl;dr the first picture is much more helpful than the second.
+> Of 6787 total dependencies, there are 860 bad dependencies (12.67128%).
 
-Code reviews aside, there were some other challenges that came with reorganizing the codebase while other developers worked to improve it: there's always a team-wide learning curve when familiar code is split up and rearranged; merge conflicts were gross[9]; we kind of broke `git blame`, which now thinks the three of us doing the package moves are the original authors of most of webapp; etc. In general, we were able to mitigate the inconvenience of these kinds of playing-nice-with-others challenges by being explicit and consistent with our communication and budgeting time to help clean up the messes we made along the way (E.G. making sure to email out the scheduled moves and expecting to spend some flex time helping resolve conflicts when they occur). 
+And just like that, our codebase is two bad dependencies cleaner. Of course, the fixes are rarely so small or straight-forward. We’d often find tangles of poor code structure that would decrease bad dependencies by quite a bit. The process was roughly the same though and can continue ad infinitum; given more time to work on the project, we’d simply iterate on steps two and three (looking for bad dependencies and then breaking them up) making the codebase incrementally cleaner.
 
+## The results
 
-## Outcomes
+On one hand, we weren’t able to get rid of all of our bad dependencies – we still have a whitelist of about 750 imports that violate our new rules.
 
-In closing, we can take a evaluate the efficacy of the project by taking a look at some of the project's outcomes. Here's a highlight reel of some of the wins we've seen:
+On the other hand, getting to a codebase that exactly matches our self-imposed dependency structure doesn’t prevent us from getting much of the benefit that such an architecture provides. Even with the many exceptions to our new dependency restrictions, it is much easier to reason about where functionality lives and how to test a given piece of code.
 
-* **Fewer Bad Dependencies**---We've recorded a measurable improvement in our dependency structure[10]! Having 1) built out a formalized notion of what a bad depenency is and 2) written tools for finding them in our codebase, we've been able to measure the goodness of our dependency structure over the course of the project. When we first took this measurement (before making the moves, and with an entirely hypothetical component structure based on the divisions mandated by our giant monolithic spreadsheet), we found that about 17.5% of all of our inter-package dependencies we bad. On December 13th, after having made all the initial package moves, we took this measurement again as found that 14.6% of our dependencies were bad. Taking this measurement the webapp in production on January 15th, the first day after the project is officially complete, we see that have reduced the percent of bad dependencies in webapp to 7.8%. This improvement represents a series of changes to our codebase's architecture which will streamline the development process and save dozens (maybe even hundreds) of developer-hours every year for the forseeable future! I think this is a really cool result!
-* **Better Understanding of Structure**---In addition to getting rid of bad dependencies, we've also taken inventory of the bad dependencies that remain and have tried to understand what work is left to reduce this number even further. We now have a finite set of well-defined tasks that we can do to improve our dependency structure as best as possible. Even though we didn't have time to get to all of these, the work we've done allows us to know what work is left to do, how to do it, and how to prioritize it moving forward.
-* **Code Hygeine**---`ls webapp` has been cleaned up significantly[11], and the directory and sub-directory structure of our entire codebase has been audited. This added intentionality with regards to organization makes a big difference. **TODO: Pics**
-* **Better Documentation**---For the first time, Khan Academy's webapp has top-level README which serves as a high-level introduction to our product and gives a one-line description of each of our components. In addition, each of our components has a README describing what it does, which engineering initiative owns it, and how it's structured.
-* **Clear Mental Model of Webapp**---In with the help of our clean new structure and concise documentation, it's easy to form a clear mental map of our entire codebase and see how different parts of our product relate to one another. This will have a huge impact on the ease of onboarding, but even developers who've been working on webapp for a long time have been been positively impacted and excited by this side effect of ADR-13.
-* **Code Ownership**---Every component is explicitly owned by one of khan academy's engineering initiatives. Before ADR-13, there were parts of the product that were a grey area. Now, we don't have to ask "Who owns this, again?" when something breaks or needs to be changed.
-* **Potential for Microservices**---The increased modularity of our componentized codebase is a big first step towards a microservice-based architecture. 
-* **Potential for Maintenance**---We now have a linter that runs at `commit` time that will not let you add code that either doesn't adhere to component structure or introduces new bad dependencies to webapp[12]. In other words, the improvements introduced over the last milestone will be hard to undo.
+To start, one big win is that we were able to record a measurable improvement in our codebase’s structure! Having 1) built out a formalized notion of what a bad dependency is and 2) written tools for finding them in our codebase, we've been able to measure the "goodness" of our dependency structure over the course of the project.
 
-Overall, re-architecting webapp with dependency structure in mind was a large and challenging project, but it set up the KA engineering team to work better and more effectively in the future!
+When we first took this measurement, we found that about 15.2% of all of our inter-package dependencies were bad. Taking this measurement the codebase in production right after the end of the project, we had reduced the percent of bad dependencies to 7.8%.
 
-Onward, and a happy start to 2018 from the KA team!
+7.8% may still seem like a lot, but you can visually see the difference. Below is the dependency graph generated after our changes. Compared to the first tangle, we see that a lot of the dependencies that had been scattered all over the place have now been concentrated into a few clusters around our inter-package APIs, making the tangle appear... lighter.
 
-## Footnotes
+![A picture of a huge dependency graph; there is still a tangle at the center but there are some other, more distinct groupings](/adr13/after_deps.png)
 
-[1] One time I spent 30 minutes.\n
+What’s more, the benefits of this continue to help us develop clean code quickly. We now have a check that’s run at commit time that will let you know if your changes added a new bad import. In other words, you can’t accidentally introduce dependencies on higher-level code; if you’re going to violate the new rules, you have to do so explicitly.
 
-[2] So we usually hack around it and move imports to. Usually, this technique is more of a hacky bandaid on a larger structural issue.
+These effects, in tandem with the clean-ups and refactors that came along with our dependency-chasing process above, left our codebase in a good place. Our self-imposed dependency order will help us develop faster and better in 2018 and beyond.
 
-[3] Citation: me
-
-[4] Unused imports eg.
-
-[5] Ironically, neither naming difficulties nor cache invalidation made it to the list of challenges in this article. In short, though, we use absolute imports in our python code, which require that the full paths of imports be specified. So, while `exercise_mechanics` is a descriptive and precise package name in theory, our teammates wouldn't be super excited after calling a static method on a class like `exercise_mechanics.user_simulator.simulated_users.ProbablisticUser`. There are ways around this (`from` imports, assigning the class to a new variable in the file where it's users), but yuck. And the cache invalidation problems we ran into with pickling and unpickling deserve an article of their own.
-
-[6] Although we did have a very well-done rough draft of a set of possible packages and many of the files that would go in them! A big thanks to Ben Kraft for working on this in the months leading up to the TSM - there's no way we could have gotten as far as we did on this project without the groundwork already laid out!
-
-[7] EG one time I ran `arc diff` after creating a particularly large component. After about ~30 minutes of linting and ~20 minutews of unit tests, the diff failed with a "503 Max Size Exceeded Error". (**TODO pic**). To hack around this, I used `arc diff --nolint --nounit --less-context --verbatim` for the rest of my diffs. This hack had the unfortunate side-effect of removing code surrounding my changes, making the diffs harder to review.
-
-[8] Q. What happens to a frog's car when it breaks down?
-A. It gets _toad_ away.
-
-[9] Merge conflicts were gross enough that if you didn't deploy a package move within about a day of starting it, you would spend more time fixing merge conflicts than you did doing the actual package move.
-
-[10] Personally, I think this is the coolest of our end results. I'm a really big fan of using new metrics to quantify abstract things like "dependency structure", and measurable improvement is lit.
-
-[11] Fun fact: we found that this unused image has been hiding, entirely unnoticed, in the top level of `webapp` since mid 2015. This strikes me as particularly ironic. **TODO: pic** 
-
-[12] We have a whitelist of all of the bad dependencies that we haven't been able to fix yet. We plan to continue to whittle away at this list in 2018. Developers _could_ theoretically introduce new bad dependencies by adding to this list, but we (the ADR-13 team) are automatically notified by additions to the whitelist and will politely encourage transgressors to find a different solution whenever possible :)
+*Big thanks to all of my teammates who helped get this blogpost from its draft to publish, especially Kevin Dangoor, Scott Grant, Ben Kraft, and Craig Silverstein.*
