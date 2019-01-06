@@ -1,13 +1,14 @@
 +++
-title = "Re-architecting for Dependency Structure"
-description = "Untangling Khan Academy's Webapp for Fun and Profit"
+title = "Untangling Khan Academy's Python Codebase"
+description = "Re-architecting python code with an intentional dependency structure"
 date = 2018-04-15
 publishDate = 2018-04-15
 author = "Carter J. Bastian"
 aliases = [
-    "/post/adr-13/",
-    "/adr-13/",
-    "/re-architecting-for-dependencies/",
+    "/post/adr13/",
+    "/adr13/",
+    "/post/untangling-python-code",
+    "/untangling-khan-academys-python-codebase/",
 ]
 +++
 
