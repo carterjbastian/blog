@@ -24,7 +24,7 @@ aliases = [
 
 I love New Years Eve. It's my favorite of all holidays! Other holidays celebrate bunnies, or monsters, or the systemic exploitation of indigenous people, or Jesus Christ's kind-of birthday<sup>[[1]](#FN1)</sup>, but not New Years. New Years celebrates reflection on the past and hope for the future.
 
-In the spirit of the New Year, I take a couple hours a day out of my holiday vacation time to retrospect on the past year, plan for the upcoming year, and set goals. Since I place a lot of stock in the power of momentous occasions, I take this process seriously. My year-in retrospective usually ends up looking like a formal project retro would at work, my resolutions end up encompassing pages of categorized goals, and I end up with fairly organized plans detailing how I will get from where I am at the end of this year to where my idea self is at the end of next year.
+In the spirit of the New Year, I take a couple hours a day out of my holiday vacation time to retrospect on the past year, plan for the upcoming year, and set goals. Since I place a lot of stock in the power of momentous occasions, I take this process seriously. My year-in retrospective usually ends up looking like a formal project retro would at work, my resolutions end up encompassing pages of categorized goals, and I end up with fairly organized plans detailing how I will get from where I am at the end of this year to where my ideal self is at the end of next year.
 
 **In short, I, like many people, write a set of New Years Resolutions. I also, like many people, tend to fall short on my resolutions by a wide margin.**
 
