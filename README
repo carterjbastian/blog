@@ -1,0 +1,6 @@
+Instructions:
+
+* Write blog posts in Markdown in content/posts
+* Put images in static/
+* To test locally: `hugo serve`
+* To deploy; `git push; ./deploy.sh`
