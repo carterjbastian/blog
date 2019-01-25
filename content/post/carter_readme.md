@@ -63,7 +63,7 @@ Note that this doc is W.I.P. (and so am I)! It's a list of strong preferences we
 ## Miscellaneous Quirks
 * I am a pretty emoji-heavy writer. 🤷 I think you can tell a lot about a company by their library of custom slack emojis<sup>[[4]](#FN4)</sup>.
 
-* **Certain office spaces make me hella uncomfortable**. I get panic-y in closed office spaces, assigned desks, and cubicles. I like working more in spaces that are more open and have constant background noise.
+* **Certain office spaces make me hella uncomfortable**. I get panic-y in closed office spaces, assigned desks, and cubicles. I like working more in spaces that are open and have constant background noise.
 
 * **I work best in coffee shops**. If I'm not in the office, I'm probably at Starbucks.
 
