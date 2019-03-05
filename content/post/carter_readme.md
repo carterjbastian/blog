@@ -1,12 +1,14 @@
 +++
-title = "CARTER.README"
+title = "Personal README"
 description = "A bulleted guide to my working style"
 date = 2019-01-24
 publishDate = 2019-01-24
 author = "Carter J. Bastian"
 aliases = [
     "/post/carter-readme/",
-    "/carter-readme/"
+    "/post/personal-readme/",
+    "/carter-readme/",
+    "/personal-readme/"
 ]
 +++
 
